@@ -114,14 +114,27 @@ impl<S:HashKeyTrait, T: MyTrait> LRUCache<S, T> {
 
 impl<S:HashKeyTrait, T: MyTrait> LRUCache<S, T> {
     fn get(&mut self, &key:&S) -> Option<T> {
+        let output:Option<T>;
+
         match self.node_map.get(&key) {
             Some(x) => {
-                return Some(x.val);
+                output = Some(x.val);
             }
             None => {
-                return None;
+                output = None;
             }
         }
+
+        self.delete(&key);
+
+        match output {
+            Some(v) => {
+                self.add(&key, &v);
+            }
+            None => {}
+        }
+
+        return output;
     }
 }
 
@@ -256,7 +269,7 @@ fn main() {
     cache.print_cache(None);
     println!();
 
-    match cache.get(&"e") {
+    match cache.get(&"f") {
         Some(x) => {
             println!("{:?}", x);
         }
@@ -265,4 +278,6 @@ fn main() {
         }
         
     }
+    cache.print_cache(None);
+    println!();
 }
