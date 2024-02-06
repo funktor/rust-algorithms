@@ -77,7 +77,7 @@ fn dfs(mat: &[Vec<u32>], start_x:u32, start_y:u32, end_x:u32, end_y:u32) -> bool
 }
 
 fn main() {
-    let mat = vec![vec![1,1,0,1],vec![1,1,0,1],vec![1,1,0,1],vec![1,1,1,1]];
-    let reachable: bool = dfs(&mat[..], 0, 0, 0, 3);
+    let mat = vec![vec![1,1,0,0],vec![0,1,1,0],vec![0,0,1,1],vec![0,0,0,1]];
+    let reachable: bool = dfs(&mat[..], 0, 0, 3, 3);
     println!("Reachable = {}", reachable);
 }
