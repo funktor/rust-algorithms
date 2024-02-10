@@ -48,37 +48,46 @@ impl<T: MyTrait> Node<T> {
 }
 
 impl<T: MyTrait> BST<T> {
-    fn insert(&mut self, root_node:&mut Option<Box<Node<T>>>, &val:&T) -> Option<Box<Node<T>>>{  
+    fn insert(&mut self, root_node:&mut Option<Box<Node<T>>>, &val:&T) {  
         if (self.root_node.is_none()) && (!root_node.is_none()) {
             self.root_node = root_node.clone();
         }
 
+        let new_node = Node::new(&val);
+
         match root_node {
-            Some(ref mut node) => {
+            Some(node) => {
                 if val <= node.val {
-                    node.lt_node = self.insert(&mut node.lt_node, &val);
+                    if node.lt_node.is_none() {
+                        node.lt_node = Some(Box::new(new_node));
+                    }
+                    else {
+                        self.insert(&mut node.lt_node, &val);
+                    }
                 }
                 else {
-                    node.rt_node = self.insert(&mut node.rt_node, &val);
+                    if node.rt_node.is_none() {
+                        node.rt_node = Some(Box::new(new_node));
+                    }
+                    else {
+                        self.insert(&mut node.rt_node, &val);
+                    }
                 }
             }
             None => {
-                let node = Node::new(&val);
-                return Some(Box::new(node));
+                *root_node = Some(Box::new(new_node));
             }
         }
-        
-        return root_node.clone();
     }
 }
 
 impl<T: MyTrait> BST<T> {
-    fn delete(&mut self, root_node:&mut Option<Box<Node<T>>>, &val:&T) -> Option<Box<Node<T>>> {  
+    fn delete(&mut self, root_node:&mut Option<Box<Node<T>>>, &val:&T) {  
         match root_node {
             Some(ref mut node) => {
                 if val == node.val {
                     if (node.lt_node.is_none()) && (node.rt_node.is_none()) {
-                        return None;
+                        *root_node = None;
                     }
                     else if node.lt_node.is_none() {
                         match &node.rt_node {
@@ -114,23 +123,21 @@ impl<T: MyTrait> BST<T> {
                         }
 
                         if has_successor {
-                            node.rt_node = self.delete(&mut node.rt_node, &node.val);
+                            self.delete(&mut node.rt_node, &node.val);
                         }
                     }
                 }
 
                 else if val < node.val {
-                    node.lt_node = self.delete(&mut node.lt_node, &val);
+                    self.delete(&mut node.lt_node, &val);
                 }
 
                 else {
-                    node.rt_node = self.delete(&mut node.rt_node, &val);
+                    self.delete(&mut node.rt_node, &val);
                 }
             }
             None => {}
         }
-
-        return root_node.clone();
     }
 }
 
@@ -151,16 +158,16 @@ fn main() {
     let mut bst:BST<u32> = BST::new();
     let mut root:Option<Box<Node<u32>>> = bst.root_node.clone();
 
-    root = bst.insert(&mut root, &10);
-    root = bst.insert(&mut root, &20);
-    root = bst.insert(&mut root, &5);
-    root = bst.insert(&mut root, &9);
-    root = bst.insert(&mut root, &2);
-    root = bst.insert(&mut root, &15);
-    root = bst.insert(&mut root, &30);
+    bst.insert(&mut root, &10);
+    bst.insert(&mut root, &20);
+    bst.insert(&mut root, &5);
+    bst.insert(&mut root, &9);
+    bst.insert(&mut root, &2);
+    bst.insert(&mut root, &15);
+    bst.insert(&mut root, &30);
     bst.print_tree(&root, 0);
     println!();
-    root = bst.delete(&mut root, &10);
+    bst.delete(&mut root, &10);
     bst.print_tree(&root, 0);
 }
  
