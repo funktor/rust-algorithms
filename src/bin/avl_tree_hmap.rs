@@ -219,6 +219,131 @@ impl<T: MyTrait> AVLTree<T> {
 }
 
 impl<T: MyTrait> AVLTree<T> {
+    fn check_and_rotate(&mut self, root_node_id:Option<usize>, &val:&T)->Option<usize> {
+        match root_node_id {
+            Some(root_node_id_val) => {
+                let hdiff = self.height_diff(root_node_id);
+
+                if hdiff > 1 {
+                    let root = self.id_to_node_map.get(&root_node_id_val);
+                    match root {
+                        Some(root_ref) => {
+                            let lt_node_id = root_ref.lt_node_id;
+                            match lt_node_id {
+                                Some(lt_node_id_val) => {
+                                    let lt_node = self.id_to_node_map.get(&lt_node_id_val);
+                                    match lt_node {
+                                        Some(lt_node_ref) => {
+                                            if val <= lt_node_ref.val {
+                                                return self.right_rotate(root_node_id);
+                                            }
+                                            else if val > lt_node_ref.val {
+                                                let new_lt_id = self.left_rotate(lt_node_id);
+                                                self.id_to_node_map.entry(root_node_id_val).and_modify(|z| z.lt_node_id = new_lt_id);
+                                                return self.right_rotate(root_node_id);
+                                            }
+                                        }
+                                        None => {}
+                                    }
+                                }
+                                None => {}
+                            }  
+                        }
+                        None => {}
+                    } 
+                }
+
+                else if hdiff < -1 {
+                    let root = self.id_to_node_map.get(&root_node_id_val);
+                    match root {
+                        Some(root_ref) => {
+                            let rt_node_id = root_ref.rt_node_id;
+                            match rt_node_id {
+                                Some(rt_node_id_val) => {
+                                    let rt_node = self.id_to_node_map.get(&rt_node_id_val);
+                                    match rt_node {
+                                        Some(rt_node_ref) => {
+                                            if val > rt_node_ref.val {
+                                                return self.left_rotate(root_node_id);
+                                            }
+                                            else if val <= rt_node_ref.val {
+                                                let new_rt_id = self.right_rotate(rt_node_id);
+                                                self.id_to_node_map.entry(root_node_id_val).and_modify(|z| z.rt_node_id = new_rt_id);
+                                                return self.left_rotate(root_node_id);
+                                            }
+                                        }
+                                        None => {}
+                                    }
+                                }
+                                None => {}
+                            }
+                        }
+                        None => {}
+                    }
+                }
+            }
+            None => {}
+        }
+
+        return root_node_id;
+    }
+}
+
+
+impl<T: MyTrait> AVLTree<T> {
+    fn check_and_rotate_deletion(&mut self, root_node_id:Option<usize>)->Option<usize> {
+        match root_node_id {
+            Some(root_node_id_val) => {
+                let hdiff = self.height_diff(root_node_id);
+
+                if hdiff > 1 {
+                    let root = self.id_to_node_map.get(&root_node_id_val);
+                    match root {
+                        Some(root_ref) => {
+                            let lt_node_id = root_ref.lt_node_id;
+                            let hdiff_lt_node_id = self.height_diff(lt_node_id);
+
+                            if hdiff_lt_node_id >= 0 {
+                                return self.right_rotate(root_node_id);
+                            }
+                            else {
+                                let new_lt_id = self.left_rotate(lt_node_id);
+                                self.id_to_node_map.entry(root_node_id_val).and_modify(|z| z.lt_node_id = new_lt_id);
+                                return self.right_rotate(root_node_id);
+                            }
+                        }
+                        None => {}
+                    } 
+                }
+
+                else if hdiff < -1 {
+                    let root = self.id_to_node_map.get(&root_node_id_val);
+                    match root {
+                        Some(root_ref) => {
+                            let rt_node_id = root_ref.rt_node_id;
+                            let hdiff_rt_node_id = self.height_diff(rt_node_id);
+
+                            if hdiff_rt_node_id < 0 {
+                                return self.left_rotate(root_node_id);
+                            }
+                            else {
+                                let new_rt_id = self.right_rotate(rt_node_id);
+                                self.id_to_node_map.entry(root_node_id_val).and_modify(|z| z.rt_node_id = new_rt_id);
+                                return self.left_rotate(root_node_id);
+                            }                     
+                        }
+                        None => {}
+                    }
+                }
+            }
+            None => {}
+        }
+
+        return root_node_id;
+    }
+}
+
+impl<T: MyTrait> AVLTree<T> {
     fn insert(&mut self, root_node_id:Option<usize>, &val:&T)->Option<usize> {
         match root_node_id {
             Some(root_node_id_val) => {
@@ -273,71 +398,124 @@ impl<T: MyTrait> AVLTree<T> {
             }
             None => {}
         }
+        
+        return self.check_and_rotate(root_node_id, &val);
+    }
+}
+
+impl<T: MyTrait> AVLTree<T> {
+    fn delete(&mut self, root_node_id:Option<usize>, &val:&T)->Option<usize> {
+        let mut root_id:Option<usize> = root_node_id;
 
         match root_node_id {
-            Some(root_node_id_val) => {
-                let hdiff = self.height_diff(root_node_id);
-
-                if hdiff > 1 {
-                    let root = self.id_to_node_map.get(&root_node_id_val);
-                    match root {
-                        Some(root_ref) => {
+            Some(node) => {
+                let root = &mut self.id_to_node_map.get(&node);
+                match root {
+                    Some(root_ref) => {
+                        if val == root_ref.val {
                             let lt_node_id = root_ref.lt_node_id;
-                            match lt_node_id {
-                                Some(lt_node_id_val) => {
-                                    let lt_node = self.id_to_node_map.get(&lt_node_id_val);
-                                    match lt_node {
-                                        Some(lt_node_ref) => {
-                                            if val <= lt_node_ref.val {
-                                                return self.right_rotate(root_node_id);
-                                            }
-                                            else if val > lt_node_ref.val {
-                                                self.left_rotate(lt_node_id);
-                                                return self.right_rotate(root_node_id);
-                                            }
-                                        }
-                                        None => {}
-                                    }
-                                }
-                                None => {}
-                            }  
-                        }
-                        None => {}
-                    } 
-                }
-
-                else if hdiff < -1 {
-                    let root = self.id_to_node_map.get(&root_node_id_val);
-                    match root {
-                        Some(root_ref) => {
                             let rt_node_id = root_ref.rt_node_id;
-                            match rt_node_id {
-                                Some(rt_node_id_val) => {
-                                    let rt_node = self.id_to_node_map.get(&rt_node_id_val);
-                                    match rt_node {
-                                        Some(rt_node_ref) => {
-                                            if val > rt_node_ref.val {
-                                                return self.left_rotate(root_node_id);
+
+                            if (lt_node_id.is_none()) && (rt_node_id.is_none()) {
+                                self.id_to_node_map.remove_entry(&node);
+                                root_id = None;
+                            }
+
+                            else if lt_node_id.is_none() {
+                                match rt_node_id {
+                                    Some(x) => {
+                                        let rt_node = self.id_to_node_map.get(&x);
+                                        match rt_node {
+                                            Some(rt_node_ref) => {
+                                                let v = rt_node_ref.val;
+                                                self.id_to_node_map.entry(node).and_modify(|z| {z.val = v; z.rt_node_id = None;});
                                             }
-                                            else if val <= rt_node_ref.val {
-                                                self.right_rotate(rt_node_id);
-                                                return self.left_rotate(root_node_id);
+                                            None => {}
+                                        }
+                                        self.id_to_node_map.remove_entry(&x);
+                                    }
+                                    None => {}
+                                }
+                            }
+
+                            else if rt_node_id.is_none() {
+                                match lt_node_id {
+                                    Some(x) => {
+                                        let lt_node = self.id_to_node_map.get(&x);
+                                        match lt_node {
+                                            Some(lt_node_ref) => {
+                                                let v = lt_node_ref.val;
+                                                self.id_to_node_map.entry(node).and_modify(|z| {z.val = v; z.lt_node_id = None;});
+                                            }
+                                            None => {}
+                                        }
+                                        self.id_to_node_map.remove_entry(&x);
+                                    }
+                                    None => {}
+                                }
+                            }
+
+                            else {
+                                let mut next_id = rt_node_id;
+                                let mut sval:Option<T> = None;
+
+                                while !next_id.is_none() {
+                                    match next_id {
+                                        Some(x) => {
+                                            let next = &mut self.id_to_node_map.get(&x);
+                                            match next {
+                                                Some(next_ref) => {
+                                                    sval = Some(next_ref.val);
+                                                    next_id = next_ref.lt_node_id;
+                                                }
+                                                None => {}
                                             }
                                         }
                                         None => {}
                                     }
                                 }
-                                None => {}
+
+                                match sval {
+                                    Some(v) => {
+                                        let new_rt_id = self.delete(root_ref.rt_node_id, &v);
+                                        self.id_to_node_map.entry(node).and_modify(|z: &mut Node<T>| {z.rt_node_id = new_rt_id; z.val = v;});
+                                    }
+                                    None => {}
+                                }
                             }
                         }
-                        None => {}
+
+                        else if val < root_ref.val {
+                            let new_lt_id = self.delete(root_ref.lt_node_id, &val);
+                            self.id_to_node_map.entry(node).and_modify(|z: &mut Node<T>| z.lt_node_id = new_lt_id);
+                        }
+
+                        else {
+                            let new_rt_id = self.delete(root_ref.rt_node_id, &val);
+                            self.id_to_node_map.entry(node).and_modify(|z: &mut Node<T>| z.rt_node_id = new_rt_id);
+                        }
                     }
+                    None => {}
                 }
             }
             None => {}
         }
 
-        return root_node_id;
+        match root_id {
+            Some(x) => {
+                let root = &mut self.id_to_node_map.get(&x);
+                match root {
+                    Some(_y) => {
+                        self.set_height(root_id);
+                    }
+                    None => {}
+                }
+            }
+            None => {}
+        }
+
+        return self.check_and_rotate_deletion(root_id);
+
     }
 }
 
@@ -366,6 +544,12 @@ fn main() {
 
     for i in 1..32 {
         root = avltree.insert(root, &i);
+        avltree.print_tree(root, 0);
+        println!();
+    }
+
+    for i in 16..32 {
+        root = avltree.delete(root, &i);
         avltree.print_tree(root, 0);
         println!();
     }
