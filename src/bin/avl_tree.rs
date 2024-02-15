@@ -1,4 +1,6 @@
 use std::{cmp::max, fmt::Debug};
+use rand::thread_rng;
+use rand::seq::SliceRandom;
 pub trait MyTrait: PartialOrd + Debug + Copy {}
 
 impl MyTrait for i8 {}
@@ -280,11 +282,13 @@ fn main() {
     let mut avltree:AVLTree<usize> = AVLTree::new();
     let mut root:Option<Box<Node<usize>>> = None;
 
-    for i in 1..32 {
-        avltree.insert(&mut root, &i);
+    let mut vec: Vec<usize> = (1..32).collect();
+    vec.shuffle(&mut thread_rng());
+
+    for v in vec.iter() {
+        avltree.insert(&mut root, &v);
         avltree.print_tree(&root, 0);
         println!();
     }
-
     avltree.root_node = root.clone();
 }
