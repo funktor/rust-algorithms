@@ -544,11 +544,11 @@ fn main() {
     let mut avltree:AVLTree<usize> = AVLTree::new();
     let mut root:Option<usize> = None;
 
-    let mut vec: Vec<usize> = (1..32).collect();
+    let mut vec: Vec<usize> = (1..1000000).collect();
     vec.shuffle(&mut thread_rng());
 
     for v in vec.iter() {
-        avltree.insert(root, &v);
+        root = avltree.insert(root, &v);
         avltree.print_tree(root, 0);
         println!();
     }

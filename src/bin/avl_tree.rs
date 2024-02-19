@@ -106,35 +106,28 @@ impl<T: MyTrait> AVLTree<T> {
     fn right_rotate(&mut self, root_node:&mut Option<Box<Node<T>>>) {
         match root_node {
             Some(node) => {
-                let mut node_clone = node.clone();
                 let lt_node = &mut node.lt_node;
+                let lt_node_clone = &mut lt_node.clone();
 
                 match lt_node {
                     Some(x) => {
                         let lt_rt_node = &x.rt_node;
-                        match lt_rt_node {
-                            Some(y) => {
-                                node_clone.lt_node = Some(y.clone());
-                            }
-                            None => {
-                                node_clone.lt_node = None;
-                            }
-                        }
+                        node.lt_node = lt_rt_node.clone();
                     }
                     None => {}
                 }
-                
-                let mut new_rt_node = Some(node_clone);
-                self.set_height(&mut new_rt_node);
 
-                match lt_node {
+                self.set_height(root_node);
+
+                match lt_node_clone {
                     Some(x) => {
-                        x.rt_node = new_rt_node;
-                        *root_node = Some(x.clone());
-                        self.set_height(root_node);
+                        x.rt_node = root_node.clone();
                     }
                     None => {}
                 }
+
+                *root_node = lt_node_clone.clone();
+                self.set_height(root_node);
             }
             None => {}
         }
@@ -145,35 +138,28 @@ impl<T: MyTrait> AVLTree<T> {
     fn left_rotate(&mut self, root_node:&mut Option<Box<Node<T>>>) {
         match root_node {
             Some(node) => {
-                let mut node_clone = node.clone();
                 let rt_node = &mut node.rt_node;
+                let rt_node_clone = &mut rt_node.clone();
 
                 match rt_node {
                     Some(x) => {
                         let rt_lt_node = &x.lt_node;
-                        match rt_lt_node {
-                            Some(y) => {
-                                node_clone.rt_node = Some(y.clone());
-                            }
-                            None => {
-                                node_clone.rt_node = None;
-                            }
-                        }
+                        node.rt_node = rt_lt_node.clone();
                     }
                     None => {}
                 }
-                
-                let mut new_lt_node = Some(node_clone);
-                self.set_height(&mut new_lt_node);
 
-                match rt_node {
+                self.set_height(root_node);
+
+                match rt_node_clone {
                     Some(x) => {
-                        x.lt_node = new_lt_node;
-                        *root_node = Some(x.clone());
-                        self.set_height(root_node);
+                        x.lt_node = root_node.clone();
                     }
                     None => {}
                 }
+
+                *root_node = rt_node_clone.clone();
+                self.set_height(root_node);
             }
             None => {}
         }
@@ -182,6 +168,8 @@ impl<T: MyTrait> AVLTree<T> {
 
 impl<T: MyTrait> AVLTree<T> {
     fn insert(&mut self, root_node:&mut Option<Box<Node<T>>>, &val:&T) {
+        let mut hdiff:isize = 0;
+
         match root_node {
             Some(node) => {
                 if val <= node.val {
@@ -208,6 +196,9 @@ impl<T: MyTrait> AVLTree<T> {
                         }
                     }
                 }
+
+                self.set_height(root_node);
+                hdiff = self.height_diff(root_node);
             }
             None => {
                 let new_node:Node<T> = Node::new(&val);
@@ -215,22 +206,10 @@ impl<T: MyTrait> AVLTree<T> {
             }
         }
 
-        let mut hdiff:isize = 0;
-
-        match root_node {
-            Some(_node) => {
-                self.set_height(root_node);
-                hdiff = self.height_diff(root_node);
-            }
-            None => {}
-        }
-
-        match root_node {
-            Some(node) => {
-                let lt_node = &mut node.lt_node;
-                let rt_node = &mut node.rt_node;
-        
-                if hdiff > 1 {
+        if hdiff > 1 {
+            match root_node {
+                Some(node) => {
+                    let lt_node = &mut node.lt_node;
                     match lt_node {
                         Some(x) => {
                             if val <= x.val {
@@ -244,8 +223,14 @@ impl<T: MyTrait> AVLTree<T> {
                         None => {}
                     }
                 }
-        
-                else if hdiff < -1 {
+                None => {}
+            }
+        }
+
+        else if hdiff < -1 {
+            match root_node {
+                Some(node) => {
+                    let rt_node = &mut node.rt_node;
                     match rt_node {
                         Some(x) => {
                             if val <= x.val {
@@ -259,8 +244,8 @@ impl<T: MyTrait> AVLTree<T> {
                         None => {}
                     }
                 }
+                None => {}
             }
-            None => {}
         }
     }
 }
@@ -282,7 +267,7 @@ fn main() {
     let mut avltree:AVLTree<usize> = AVLTree::new();
     let mut root:Option<Box<Node<usize>>> = None;
 
-    let mut vec: Vec<usize> = (1..32).collect();
+    let mut vec: Vec<usize> = (1..1000000).collect();
     vec.shuffle(&mut thread_rng());
 
     for v in vec.iter() {
