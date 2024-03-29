@@ -223,38 +223,16 @@ impl<T: MyTrait> Treap<T> {
                     }
                     None => {}
                 }
+
+                if flag == 1 {
+                    self.right_rotate(root_node);
+                }
+
+                else if flag == 2 {
+                    self.left_rotate(root_node);
+                }
             }
             None => {}
-        }
-
-        if flag == 1 {
-            match root_node {
-                Some(node) => {
-                    let lt_node = &mut node.lt_node;
-                    match lt_node {
-                        Some(_x) => {
-                            self.right_rotate(root_node);
-                        }
-                        None => {}
-                    }
-                }
-                None => {}
-            }
-        }
-
-        else if flag == 2 {
-            match root_node {
-                Some(node) => {
-                    let rt_node = &mut node.rt_node;
-                    match rt_node {
-                        Some(_x) => {
-                            self.left_rotate(root_node);
-                        }
-                        None => {}
-                    }
-                }
-                None => {}
-            }
         }
     }
 }
@@ -329,6 +307,9 @@ impl<T: MyTrait> Treap<T> {
                 None => {}
             }
         }
+
+        self.set_height(root_node);
+        
     }
 }
 
