@@ -9,12 +9,14 @@ impl MyTrait for i8 {}
 impl MyTrait for i16 {}
 impl MyTrait for i32 {}
 impl MyTrait for i64 {}
+impl MyTrait for i128 {}
 impl MyTrait for isize {}
 
 impl MyTrait for u8 {}
 impl MyTrait for u16 {}
 impl MyTrait for u32 {}
 impl MyTrait for u64 {}
+impl MyTrait for u128 {}
 impl MyTrait for usize {}
 
 impl MyTrait for f32 {}
