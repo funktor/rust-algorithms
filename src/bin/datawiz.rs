@@ -258,41 +258,50 @@ impl<S: MyTrait> SkipList<S> {
 
 impl<S: MyTrait> SkipList<S> {
     pub fn search(&self, val: S) -> Vec<usize> {
-        let mut lt_idx:usize = 0;
-        let mut rt_idx:usize = self.node_vec.len()-1;
+        let mut curr_node_id = self.head_id;
+        let mut curr_level = self.num_levels-1;
 
-        let mut start:Option<usize> = None;
+        let mut start:Option<Node<S>> = None;
 
-        while lt_idx <= rt_idx {
-            let mid = (lt_idx + rt_idx)/2;
-            let node = self.node_vec[mid].as_ref().unwrap();
+        loop {
+            let curr_node = self.node_vec[curr_node_id].as_ref().unwrap();
 
-            if node.val == val {
-                start = Some(mid);
+            if curr_level < curr_node.next_pointers.len() {
+                let next_node_id = curr_node.next_pointers[curr_level];
+                let next_node = self.node_vec[next_node_id].as_ref().unwrap();
 
-                if mid == 0 {
-                    break;
+                if next_node.val == val {
+                    start = Some(next_node.clone());
+                    if curr_level == 0 {
+                        break;
+                    }
+                    curr_level -= 1;
                 }
                 else {
-                    rt_idx = mid-1;
+                    curr_node_id = next_node_id;
                 }
             }
             else {
-                lt_idx = mid+1;
+                if curr_level == 0 {
+                    break;
+                }
+                curr_level -= 1;
             }
         }
 
         let mut output:Vec<usize> = Vec::new();
-
+        
         if !start.is_none() {
-            let mut curr_node = self.node_vec[start.unwrap()].as_ref().unwrap();
+            let mut curr_node = start.as_ref().unwrap();
             loop {
                 if curr_node.val > val {
                     break;
                 }
+
                 output.push(curr_node.index);
-                let next_node_id = curr_node.next_pointers[0];
-                if next_node_id != MAX {
+                
+                if curr_node.next_pointers.len() > 0 {
+                    let next_node_id = curr_node.next_pointers[0];
                     curr_node = self.node_vec[next_node_id].as_ref().unwrap();
                 }
                 else {
@@ -316,8 +325,9 @@ impl<S: MyTrait> SkipList<S> {
                     break;
                 }
                 output.push(start_node.index);
-                let next_node_id = start_node.next_pointers[0];
-                if next_node_id != MAX {
+
+                if start_node.next_pointers.len() > 0 {
+                    let next_node_id = start_node.next_pointers[0];
                     start_node = self.node_vec[next_node_id].as_ref().unwrap();
                 }
                 else {
@@ -341,8 +351,9 @@ impl<S: MyTrait> SkipList<S> {
                     break;
                 }
                 output.push(start_node.index);
-                let next_node_id = start_node.next_pointers[0];
-                if next_node_id != MAX {
+
+                if start_node.next_pointers.len() > 0 {
+                    let next_node_id = start_node.next_pointers[0];
                     start_node = self.node_vec[next_node_id].as_ref().unwrap();
                 }
                 else {
@@ -357,37 +368,46 @@ impl<S: MyTrait> SkipList<S> {
 
 impl<S: MyTrait> SkipList<S> {
     pub fn search_gt(&self, val: S) -> Vec<usize> {
-        let mut lt_idx:usize = 0;
-        let mut rt_idx:usize = self.node_vec.len()-1;
+        let mut curr_node_id = self.head_id;
+        let mut curr_level = self.num_levels-1;
 
-        let mut start:Option<usize> = None;
+        let mut start:Option<Node<S>> = None;
 
-        while lt_idx <= rt_idx {
-            let mid = (lt_idx + rt_idx)/2;
-            let node = self.node_vec[mid].as_ref().unwrap();
+        loop {
+            let curr_node = self.node_vec[curr_node_id].as_ref().unwrap();
 
-            if node.val > val {
-                start = Some(mid);
+            if curr_level < curr_node.next_pointers.len() {
+                let next_node_id = curr_node.next_pointers[curr_level];
+                let next_node = self.node_vec[next_node_id].as_ref().unwrap();
 
-                if mid == 0 {
-                    break;
+                if next_node.val > val {
+                    start = Some(next_node.clone());
+                    if curr_level == 0 {
+                        break;
+                    }
+                    curr_level -= 1;
                 }
                 else {
-                    rt_idx = mid-1;
+                    curr_node_id = next_node_id;
                 }
             }
             else {
-                lt_idx = mid+1;
+                if curr_level == 0 {
+                    break;
+                }
+                curr_level -= 1;
             }
         }
 
         let mut output:Vec<usize> = Vec::new();
+        
         if !start.is_none() {
-            let mut curr_node = self.node_vec[start.unwrap()].as_ref().unwrap();
+            let mut curr_node = start.as_ref().unwrap();
             loop {
                 output.push(curr_node.index);
-                let next_node_id = curr_node.next_pointers[0];
-                if next_node_id != MAX {
+                
+                if curr_node.next_pointers.len() > 0 {
+                    let next_node_id = curr_node.next_pointers[0];
                     curr_node = self.node_vec[next_node_id].as_ref().unwrap();
                 }
                 else {
@@ -402,40 +422,42 @@ impl<S: MyTrait> SkipList<S> {
 
 impl<S: MyTrait> SkipList<S> {
     pub fn search_gte(&self, val: S) -> Vec<usize> {
-        let mut lt_idx:usize = 1;
-        let mut rt_idx:usize = self.node_vec.len()-1;
+        let mut curr_node_id = self.head_id;
+        let mut curr_level = self.num_levels-1;
 
-        let mut start:Option<usize> = None;
+        let mut start:Option<Node<S>> = None;
 
-        while lt_idx <= rt_idx {
-            let mid = (lt_idx + rt_idx)/2;
-            let node = self.node_vec[mid].as_ref().unwrap();
-            println!("{:?}, {:?}, {:?}, {:?}, {:?}", lt_idx, rt_idx, mid, val, node.val);
-            
+        loop {
+            let curr_node = self.node_vec[curr_node_id].as_ref().unwrap();
 
-            if node.val >= val {
-                println!("{:?}, {:?}", mid, node.val);
-                start = Some(mid);
+            if curr_level < curr_node.next_pointers.len() {
+                let next_node_id = curr_node.next_pointers[curr_level];
+                let next_node = self.node_vec[next_node_id].as_ref().unwrap();
 
-                if mid == 0 {
-                    break;
+                if next_node.val >= val {
+                    start = Some(next_node.clone());
+                    if curr_level == 0 {
+                        break;
+                    }
+                    curr_level -= 1;
                 }
                 else {
-                    rt_idx = mid-1;
+                    curr_node_id = next_node_id;
                 }
             }
             else {
-                lt_idx = mid+1;
+                if curr_level == 0 {
+                    break;
+                }
+                curr_level -= 1;
             }
         }
 
-        println!("{:?}", start);
-
         let mut output:Vec<usize> = Vec::new();
+        
         if !start.is_none() {
-            let mut curr_node = self.node_vec[start.unwrap()].as_ref().unwrap();
+            let mut curr_node = start.as_ref().unwrap();
             loop {
-                println!("{:?}, {:?}", curr_node.index, curr_node.val);
                 output.push(curr_node.index);
                 
                 if curr_node.next_pointers.len() > 0 {
@@ -1064,9 +1086,9 @@ fn main() {
             println!();
             index[11].print_sl();
 
-            let filtered = index[11].search_gte(DataWizDataTypes::F32(0.02));
+            let filtered = index[0].search(DataWizDataTypes::Text(String::from("za west|ddv4|linux")));
             println!();
-            println!("{:?}", filtered);
+            println!("{:?}", filtered.len());
         }
         None => {}
     }
