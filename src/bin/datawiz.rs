@@ -220,7 +220,6 @@ pub mod indexer {
                         else {
                             node.next_pointers.push(self.curr_id);
                         }
-                        
                         prev_node_id_at_levels[l] = self.curr_id;
                     }
                 }
@@ -702,7 +701,7 @@ pub mod data_processor {
     use std::io;
     use std::io::prelude::*;
 
-    fn parse_line(line:&str, columnar_data:&mut Vec<String>, row_num:usize, num_cols: usize) -> usize {
+    fn parse_line(line:&str, columnar_data:&mut Vec<String>, row_num:usize, num_rows:usize, num_cols: usize) -> usize {
         let mut curr:String = String::from("");
         let mut quotes:usize = 0;
         let mut index:usize = 0;
@@ -715,7 +714,7 @@ pub mod data_processor {
     
             else if c == ',' {
                 if quotes == 0 {
-                    columnar_data[row_num*num_cols + index] = curr.clone();
+                    columnar_data[index*num_rows + row_num] = curr.clone();
                     index += 1;
                 }
                 curr.clear();
@@ -726,7 +725,7 @@ pub mod data_processor {
         }
     
         if curr.len() > 0 {
-            columnar_data[row_num*num_cols + index] = curr.clone();
+            columnar_data[index*num_rows + row_num] = curr.clone();
             index += 1;
         }
 
@@ -750,8 +749,8 @@ pub mod data_processor {
         let num_rows = lines_vec.len()-1;
         let mut num_cols:usize = 0;
 
-        let mut columnar_data:Vec<String> = vec![String::from("");100];
-        let mut colnames:Vec<String> = vec![String::from("");100];
+        let mut columnar_data:Vec<String> = vec![String::from("");num_rows*100];
+        let mut colnames:Vec<String> = Vec::new();
 
         let mut i:usize = 0;
 
@@ -759,7 +758,7 @@ pub mod data_processor {
             let curr_line = line.trim();
 
             if curr_line.len() > 0 {
-                let ncols = parse_line(curr_line, &mut columnar_data, i, num_cols);
+                let ncols = parse_line(curr_line, &mut columnar_data, i, num_rows, num_cols);
                 if ncols == 0 {
                     println!("Misformatted CSV File !!!");
                     return (Vec::new(), Vec::new(), 0, 0);
@@ -768,11 +767,11 @@ pub mod data_processor {
                     num_cols = ncols;
 
                     columnar_data.resize(num_rows*num_cols, String::from(""));
-                    colnames.resize(num_cols, String::from(""));
+                    colnames = vec![String::from("");num_cols];
 
                     if header {
                         for j in 0..num_cols {
-                            colnames[j] = columnar_data[j].clone();
+                            colnames[j] = columnar_data[j*num_rows].clone();
                         }
                     }
                     else {
@@ -803,9 +802,11 @@ pub mod data_processor {
             start = 1;
         }
 
-        for j in start..num_rows {
-            for i in 0..num_cols {
-                let index = j*num_cols + i;
+        for i in 0..num_cols {
+            let mut down_cast:bool = false;
+            
+            for j in start..num_rows {
+                let index = i*num_rows + j;
 
                 if vector[index].parse::<f64>().is_ok() && (prefs1[i] == 0 || prefs1[i] == 1) {
                     prefs1[i] = 1;
@@ -815,26 +816,19 @@ pub mod data_processor {
                 }
                 else {
                     prefs1[i] = 3;
+                    data_types[i] = String::from("String");
+                    break;
                 }
             }
-        }
-
-        for i in 0..num_cols {
+            
             if prefs1[i] == 2 {
                 data_types[i] = String::from("bool");
             }
-            else if prefs1[i] == 3 {
-                data_types[i] = String::from("String");
-            }
-        }
+            
+            else if prefs1[i] == 1 {
+                for j in start..num_rows {
+                    let index = i*num_rows + j;
 
-        let mut down_cast:Vec<bool> = vec![false;num_cols];
-
-        for j in start..num_rows {
-            for i in 0..num_cols {
-                let index = j*num_cols + i;
-
-                if prefs1[i] == 1 {
                     if vector[index].parse::<usize>().is_ok() && prefs2[i] <= 1 {
                         prefs2[i] = 1;
                     }
@@ -848,238 +842,224 @@ pub mod data_processor {
                         
                         if f - (u as f64) == 0.0 && prefs2[i] <= 1 {
                             prefs2[i] = 1;
-                            down_cast[i] = true;
+                            down_cast = true;
                         }
                         else if f - (v as f64) == 0.0 && prefs2[i] <= 2 {
                             prefs2[i] = 2;
-                            down_cast[i] = true;
+                            down_cast = true;
                         }
                         else {
                             prefs2[i] = 3;
+                            break;
                         }
                     }
                 }
-            }
-        }
-
-        for j in start..num_rows {
-            for i in 0..num_cols {
-                let index = j*num_cols + i;
-
+                
                 if prefs2[i] == 3 {
-                    if vector[index].parse::<f32>().is_ok() && prefs3[i] <= 1 {
-                        prefs3[i] = 1;
-                    }
-                    else {
-                        prefs3[i] = 2;
-                    }
-                }
-            }
-        }
+                    for j in start..num_rows {
+                        let index = i*num_rows + j;
 
-        for i in 0..num_cols {
-            if prefs2[i] == 3 {
-                if prefs3[i] == 2 {
-                    data_types[i] = String::from("f64");
-                }
-                else {
-                    data_types[i] = String::from("f32");
-                }
-            }
-        }
-
-
-        for j in start..num_rows {
-            for i in 0..num_cols {
-                let index = j*num_cols + i;
-                if prefs2[i] == 1 {
-                    if down_cast[i] {
-                        vector[index] = (vector[index].parse::<f64>().ok().unwrap() as usize).to_string();
+                        if vector[index].parse::<f32>().is_ok() && prefs3[i] <= 1 {
+                            prefs3[i] = 1;
+                        }
+                        else {
+                            prefs3[i] = 2;
+                            break;
+                        }
                     }
                     
-                    if vector[index].parse::<u8>().is_ok() && prefs3[i] <= 1 {
-                        prefs3[i] = 1;
-                    }
-                    else if vector[index].parse::<u16>().is_ok() && prefs3[i] <= 2 {
-                        prefs3[i] = 2;
-                    }
-                    else if vector[index].parse::<u32>().is_ok() && prefs3[i] <= 3 {
-                        prefs3[i] = 3;
-                    }
-                    else if vector[index].parse::<u64>().is_ok() && prefs3[i] <= 4 {
-                        prefs3[i] = 4;
+                    if prefs3[i] == 2 {
+                        data_types[i] = String::from("f64");
                     }
                     else {
-                        prefs3[i] = 5;
+                        data_types[i] = String::from("f32");
                     }
                 }
-            }
-        }
+                
+                else if prefs2[i] == 1 {
+                    for j in start..num_rows {
+                        let index = i*num_rows + j;
 
-        for i in 0..num_cols {
-            if prefs2[i] == 1 {
-                if prefs3[i] == 1 {
-                    data_types[i] = String::from("u8");
-                }
-                else if prefs3[i] == 2 {
-                    data_types[i] = String::from("u16");
-                }
-                else if prefs3[i] == 3 {
-                    data_types[i] = String::from("u32");
-                }
-                else if prefs3[i] == 4 {
-                    data_types[i] = String::from("u64");
-                }
-                else {
-                    data_types[i] = String::from("u128");
-                }
-            }
-        }
-
-        for j in start..num_rows {
-            for i in 0..num_cols {
-                let index = j*num_cols + i;
-
-                if prefs2[i] == 2 {
-                    if down_cast[i] {
-                        vector[index] = (vector[index].parse::<f64>().ok().unwrap() as isize).to_string();
+                        if down_cast {
+                            vector[index] = (vector[index].parse::<f64>().ok().unwrap() as usize).to_string();
+                        }
+                        
+                        if vector[index].parse::<u8>().is_ok() && prefs3[i] <= 1 {
+                            prefs3[i] = 1;
+                        }
+                        else if vector[index].parse::<u16>().is_ok() && prefs3[i] <= 2 {
+                            prefs3[i] = 2;
+                        }
+                        else if vector[index].parse::<u32>().is_ok() && prefs3[i] <= 3 {
+                            prefs3[i] = 3;
+                        }
+                        else if vector[index].parse::<u64>().is_ok() && prefs3[i] <= 4 {
+                            prefs3[i] = 4;
+                        }
+                        else {
+                            prefs3[i] = 5;
+                            break;
+                        }
                     }
                     
-                    if vector[index].parse::<i8>().is_ok() && prefs3[i] <= 1 {
-                        prefs3[i] = 1;
+                    if prefs3[i] == 1 {
+                        data_types[i] = String::from("u8");
                     }
-                    else if vector[index].parse::<i16>().is_ok() && prefs3[i] <= 2 {
-                        prefs3[i] = 2;
+                    else if prefs3[i] == 2 {
+                        data_types[i] = String::from("u16");
                     }
-                    else if vector[index].parse::<i32>().is_ok() && prefs3[i] <= 3 {
-                        prefs3[i] = 3;
+                    else if prefs3[i] == 3 {
+                        data_types[i] = String::from("u32");
                     }
-                    else if vector[index].parse::<i64>().is_ok() && prefs3[i] <= 4 {
-                        prefs3[i] = 4;
+                    else if prefs3[i] == 4 {
+                        data_types[i] = String::from("u64");
                     }
                     else {
-                        prefs3[i] = 5;
+                        data_types[i] = String::from("u128");
                     }
                 }
-            }
-        }
-
-        for i in 0..num_cols {
-            if prefs2[i] == 2 {
-                if prefs3[i] == 1 {
-                    data_types[i] = String::from("i8");
-                }
-                else if prefs3[i] == 2 {
-                    data_types[i] = String::from("i16");
-                }
-                else if prefs3[i] == 3 {
-                    data_types[i] = String::from("i32");
-                }
-                else if prefs3[i] == 4 {
-                    data_types[i] = String::from("i64");
-                }
+                
                 else {
-                    data_types[i] = String::from("i128");
+                    for j in start..num_rows {
+                        let index = i*num_rows + j;
+
+                        if down_cast {
+                            vector[index] = (vector[index].parse::<f64>().ok().unwrap() as isize).to_string();
+                        }
+                        
+                        if vector[index].parse::<i8>().is_ok() && prefs3[i] <= 1 {
+                            prefs3[i] = 1;
+                        }
+                        else if vector[index].parse::<i16>().is_ok() && prefs3[i] <= 2 {
+                            prefs3[i] = 2;
+                        }
+                        else if vector[index].parse::<i32>().is_ok() && prefs3[i] <= 3 {
+                            prefs3[i] = 3;
+                        }
+                        else if vector[index].parse::<i64>().is_ok() && prefs3[i] <= 4 {
+                            prefs3[i] = 4;
+                        }
+                        else {
+                            prefs3[i] = 5;
+                            break;
+                        }
+                    }
+                    
+                    if prefs3[i] == 1 {
+                        data_types[i] = String::from("i8");
+                    }
+                    else if prefs3[i] == 2 {
+                        data_types[i] = String::from("i16");
+                    }
+                    else if prefs3[i] == 3 {
+                        data_types[i] = String::from("i32");
+                    }
+                    else if prefs3[i] == 4 {
+                        data_types[i] = String::from("i64");
+                    }
+                    else {
+                        data_types[i] = String::from("i128");
+                    }
                 }
             }
         } 
-    
+        
         return data_types;
     }
     
-    pub fn update_data_type(vector:&mut Vec<String>, dtypes: &Vec<String>, num_rows:usize, num_cols:usize, header:bool) -> Vec<Option<DataWizDataTypes>> {
-        let mut new_data:Vec<Option<DataWizDataTypes>> = vec![None;num_rows*num_cols];
+    pub fn update_data_type(vector:&mut Vec<String>, dtypes: &Vec<String>, num_rows:usize, num_cols:usize, header:bool) -> Vec<DataWizDataTypes> {
+        let mut new_data:Vec<DataWizDataTypes> = vec![DataWizDataTypes::Text(String::from(""));num_rows*num_cols];
         
         let mut start:usize = 0;
         if header {
             start = 1;
         }
 
-        for j in start..num_rows {
-            for i in 0..num_cols {
-                let index = j*num_cols + i;
+        for i in 0..num_cols {
+            for j in start..num_rows {
+                let index = i*num_rows + j;
 
                 if dtypes[i] == "u8" {
                     if vector[index].parse::<u8>().is_ok() {
                         let val = vector[index].parse::<u8>().ok().unwrap();
-                        new_data[index] = Some(DataWizDataTypes::U8(val));
+                        new_data[index] = DataWizDataTypes::U8(val);
                     }
                 }
 
                 else if dtypes[i] == "u16" {
                     if vector[index].parse::<u16>().is_ok() {
                         let val = vector[index].parse::<u16>().ok().unwrap();
-                        new_data[index] = Some(DataWizDataTypes::U16(val));
+                        new_data[index] = DataWizDataTypes::U16(val);
                     }
                 }
                 else if dtypes[i] == "u32" {
                     if vector[index].parse::<u32>().is_ok() {
                         let val = vector[index].parse::<u32>().ok().unwrap();
-                        new_data[index] = Some(DataWizDataTypes::U32(val));
+                        new_data[index] = DataWizDataTypes::U32(val);
                     }
                 }
                 else if dtypes[i] == "u64" {
                     if vector[index].parse::<u64>().is_ok() {
                         let val = vector[index].parse::<u64>().ok().unwrap();
-                        new_data[index] = Some(DataWizDataTypes::U64(val));
+                        new_data[index] = DataWizDataTypes::U64(val);
                     }
                 }
                 else if dtypes[i] == "u128" {
                     if vector[index].parse::<u128>().is_ok() {
                         let val = vector[index].parse::<u128>().ok().unwrap();
-                        new_data[index] = Some(DataWizDataTypes::U128(val));
+                        new_data[index] = DataWizDataTypes::U128(val);
                     }
                 }
                 else if dtypes[i] == "i8" {
                     if vector[index].parse::<i8>().is_ok() {
                         let val = vector[index].parse::<i8>().ok().unwrap();
-                        new_data[index] = Some(DataWizDataTypes::I8(val));
+                        new_data[index] = DataWizDataTypes::I8(val);
                     }
                 }
                 else if dtypes[i] == "i16" {
                     if vector[index].parse::<i16>().is_ok() {
                         let val = vector[index].parse::<i16>().ok().unwrap();
-                        new_data[index] = Some(DataWizDataTypes::I16(val));
+                        new_data[index] = DataWizDataTypes::I16(val);
                     }
                 }
                 else if dtypes[i] == "i32" {
                     if vector[index].parse::<i32>().is_ok() {
                         let val = vector[index].parse::<i32>().ok().unwrap();
-                        new_data[index] = Some(DataWizDataTypes::I32(val));
+                        new_data[index] = DataWizDataTypes::I32(val);
                     }
                 }
                 else if dtypes[i] == "i64" {
                     if vector[index].parse::<i64>().is_ok() {
                         let val = vector[index].parse::<i64>().ok().unwrap();
-                        new_data[index] = Some(DataWizDataTypes::I64(val));
+                        new_data[index] = DataWizDataTypes::I64(val);
                     }
                 }
                 else if dtypes[i] == "i128" {
                     if vector[index].parse::<i128>().is_ok() {
                         let val = vector[index].parse::<i128>().ok().unwrap();
-                        new_data[index] = Some(DataWizDataTypes::I128(val));
+                        new_data[index] = DataWizDataTypes::I128(val);
                     }
                 }
                 else if dtypes[i] == "f32" {
                     if vector[index].parse::<f32>().is_ok() {
                         let val = vector[index].parse::<f32>().ok().unwrap();
-                        new_data[index] = Some(DataWizDataTypes::F32(val));
+                        new_data[index] = DataWizDataTypes::F32(val);
                     }
                 }
                 else if dtypes[i] == "f64" {
                     if vector[index].parse::<f64>().is_ok() {
                         let val = vector[index].parse::<f64>().ok().unwrap();
-                        new_data[index] = Some(DataWizDataTypes::F64(val));
+                        new_data[index] = DataWizDataTypes::F64(val);
                     }
                 }
                 else if dtypes[i] == "bool" {
                     if vector[index].parse::<bool>().is_ok() {
                         let val = vector[index].parse::<bool>().ok().unwrap();
-                        new_data[index] = Some(DataWizDataTypes::Bool(val));
+                        new_data[index] = DataWizDataTypes::Bool(val);
                     }
                 }
                 else {
-                    new_data[index] = Some(DataWizDataTypes::Text(vector[index].clone()));
+                    new_data[index] = DataWizDataTypes::Text(vector[index].clone());
                 }
             }
         }
@@ -1087,7 +1067,7 @@ pub mod data_processor {
         return new_data;
     }
     
-    pub fn create_index(data:&Vec<Option<DataWizDataTypes>>, dtypes: &Vec<String>, num_rows:usize, num_cols:usize, header:bool) -> Vec<SkipList<DataWizDataTypes>> {
+    pub fn create_index(data:&Vec<DataWizDataTypes>, dtypes: &Vec<String>, num_rows:usize, num_cols:usize, header:bool) -> Vec<SkipList<DataWizDataTypes>> {
         let mut index:Vec<SkipList<DataWizDataTypes>> = Vec::new();
         
         let mut start:usize = 0;
@@ -1135,31 +1115,15 @@ pub mod data_processor {
             else {
                 sl = SkipList::new(n, DataWizDataTypes::Text(String::from("")));
             }
-    
-            // for j in start..n {
-            //     let index = j*num_cols + i;
-            //     sl.insert(data[index].as_ref().unwrap(), j);
-            // }
-    
-            index.push(sl);
-        }
 
-        let mut transpose:Vec<DataWizDataTypes> = vec![DataWizDataTypes::Text(String::from(""));num_rows*num_cols];
-        
-        for i in start..num_rows {
-            for j in 0..num_cols {
-                transpose[j*num_rows + i] = data[i*num_cols + j].clone().unwrap();
-            }
-        }
-
-        for i in 0..num_cols {
-            let mut vector:Vec<DataWizDataTypes> = vec![DataWizDataTypes::Text(String::from(""));num_rows];
-            for j in 0..num_rows {
-                vector[j] = transpose[i*num_rows + j].clone();
-            }
-
+            let data_slice:&[DataWizDataTypes] = &data[(i*num_rows+start)..(i+1)*num_rows];
+            
+            let mut vector = data_slice.to_vec();
             vector.sort_by(|a, b| a.partial_cmp(b).unwrap());
-            index[i].insert_initial(&vector);
+
+            sl.insert_initial(&vector);
+            index.push(sl);
+            println!("{:?}", i);
         }
     
         return index;
