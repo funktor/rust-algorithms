@@ -44,6 +44,207 @@ pub mod data_object {
     }
 }
 
+pub mod sorted_indexer {
+    use std::fmt::Debug;
+    use std::usize::MAX;
+    use std::iter::zip;
+    use crate::data_type::DataWizDataTypes;
+
+    pub trait MyTrait: PartialOrd + Debug + Clone {}
+
+    impl MyTrait for i8 {}
+    impl MyTrait for i16 {}
+    impl MyTrait for i32 {}
+    impl MyTrait for i64 {}
+    impl MyTrait for i128 {}
+    impl MyTrait for isize {}
+
+    impl MyTrait for u8 {}
+    impl MyTrait for u16 {}
+    impl MyTrait for u32 {}
+    impl MyTrait for u64 {}
+    impl MyTrait for u128 {}
+    impl MyTrait for usize {}
+
+    impl MyTrait for f32 {}
+    impl MyTrait for f64 {}
+
+    impl MyTrait for String {}
+    impl MyTrait for DataWizDataTypes {}
+
+    #[derive(Debug, Clone)]
+    pub struct Sorter<T> {
+        data: Vec<(T, usize)>,
+    }
+
+    impl<T: MyTrait> Sorter<T> {
+        pub fn new(data:&[T]) -> Self {
+            let mut vector = data.to_vec();
+            vector.sort_by(|a, b| a.partial_cmp(b).unwrap());
+            let indices = 0..data.len();
+            
+            Self {
+                data: zip(vector, indices).collect(),
+            }
+        }
+    }
+
+    impl<T: MyTrait> Sorter<T> {
+        pub fn search(&self, val: T) -> Vec<usize> {
+            let mut lt_idx = 0;
+            let mut rt_idx = self.data.len()-1;
+            let mut index = MAX;
+
+            while lt_idx <= rt_idx {
+                let mid = (lt_idx + rt_idx)/2;
+
+                if self.data[mid].0 >= val {
+                    index = mid;
+                    rt_idx = mid-1;
+                }
+                else{
+                    lt_idx = mid+1;
+                }
+            }
+
+            let mut output:Vec<usize> = Vec::new();
+
+            if index != MAX {
+                for j in index..self.data.len() {
+                    if self.data[j].0 == val {
+                        output.push(self.data[j].1);
+                    }
+                    else {
+                        break;
+                    }
+                }
+            }
+
+            return output;
+        }
+    }
+
+    impl<T: MyTrait> Sorter<T> {
+        pub fn search_lte(&self, val: T) -> Vec<usize> {
+            let mut lt_idx = 0;
+            let mut rt_idx = self.data.len()-1;
+            let mut index = MAX;
+
+            while lt_idx <= rt_idx {
+                let mid = (lt_idx + rt_idx)/2;
+
+                if self.data[mid].0 <= val {
+                    index = mid;
+                    lt_idx = mid+1;
+                }
+                else{
+                    rt_idx = mid-1;
+                }
+            }
+
+            let mut output:Vec<usize> = Vec::new();
+
+            if index != MAX {
+                for j in 0..index+1 {
+                    output.push(self.data[j].1);
+                }
+            }
+
+            return output;
+        }
+    }
+
+    impl<T: MyTrait> Sorter<T> {
+        pub fn search_lt(&self, val: T) -> Vec<usize> {
+            let mut lt_idx = 0;
+            let mut rt_idx = self.data.len()-1;
+            let mut index = MAX;
+
+            while lt_idx <= rt_idx {
+                let mid = (lt_idx + rt_idx)/2;
+
+                if self.data[mid].0 < val {
+                    index = mid;
+                    lt_idx = mid+1;
+                }
+                else{
+                    rt_idx = mid-1;
+                }
+            }
+
+            let mut output:Vec<usize> = Vec::new();
+
+            if index != MAX {
+                for j in 0..index+1 {
+                    output.push(self.data[j].1);
+                }
+            }
+
+            return output;
+        }
+    }
+
+    impl<T: MyTrait> Sorter<T> {
+        pub fn search_gte(&self, val: T) -> Vec<usize> {
+            let mut lt_idx = 0;
+            let mut rt_idx = self.data.len()-1;
+            let mut index = MAX;
+
+            while lt_idx <= rt_idx {
+                let mid = (lt_idx + rt_idx)/2;
+
+                if self.data[mid].0 >= val {
+                    index = mid;
+                    rt_idx = mid-1;
+                }
+                else{
+                    lt_idx = mid+1;
+                }
+            }
+
+            let mut output:Vec<usize> = Vec::new();
+
+            if index != MAX {
+                for j in index..self.data.len() {
+                    output.push(self.data[j].1);
+                }
+            }
+
+            return output;
+        }
+    }
+
+    impl<T: MyTrait> Sorter<T> {
+        pub fn search_gt(&self, val: T) -> Vec<usize> {
+            let mut lt_idx = 0;
+            let mut rt_idx = self.data.len()-1;
+            let mut index = MAX;
+
+            while lt_idx <= rt_idx {
+                let mid = (lt_idx + rt_idx)/2;
+
+                if self.data[mid].0 > val {
+                    index = mid;
+                    rt_idx = mid-1;
+                }
+                else{
+                    lt_idx = mid+1;
+                }
+            }
+
+            let mut output:Vec<usize> = Vec::new();
+
+            if index != MAX {
+                for j in index..self.data.len() {
+                    output.push(self.data[j].1);
+                }
+            }
+
+            return output;
+        }
+    }
+}
+
 
 pub mod indexer {
     use std::fmt::Debug;
@@ -693,6 +894,7 @@ pub mod my_reader {
 pub mod data_processor {
     use crate::data_type::DataWizDataTypes;
     use crate::indexer::SkipList;
+    use crate::sorted_indexer::Sorter;
     use crate::data_object::DataFrame;
     use std::fs::File;
     use std::vec;
@@ -1067,8 +1269,8 @@ pub mod data_processor {
         return new_data;
     }
     
-    pub fn create_index(data:&Vec<DataWizDataTypes>, dtypes: &Vec<String>, num_rows:usize, num_cols:usize, header:bool) -> Vec<SkipList<DataWizDataTypes>> {
-        let mut index:Vec<SkipList<DataWizDataTypes>> = Vec::new();
+    pub fn create_index(data:&Vec<DataWizDataTypes>, dtypes: &Vec<String>, num_rows:usize, num_cols:usize, header:bool) -> Vec<Sorter<DataWizDataTypes>> {
+        let mut index:Vec<Sorter<DataWizDataTypes>> = Vec::new();
         
         let mut start:usize = 0;
         if header {
@@ -1076,54 +1278,60 @@ pub mod data_processor {
         }
 
         for i in 0..num_cols {
-            let mut sl:SkipList<DataWizDataTypes>;
-            let n = num_rows;
-    
-            if dtypes[i] == "u8" {
-                sl = SkipList::new(n, DataWizDataTypes::U8(std::u8::MAX));
-            }
-            else if dtypes[i] == "u16" {
-                sl = SkipList::new(n, DataWizDataTypes::U16(std::u16::MAX));
-            }
-            else if dtypes[i] == "u32" {
-                sl = SkipList::new(n, DataWizDataTypes::U32(std::u32::MAX));
-            }
-            else if dtypes[i] == "u64" {
-                sl = SkipList::new(n, DataWizDataTypes::U64(std::u64::MAX));
-            }
-            else if dtypes[i] == "u128" {
-                sl = SkipList::new(n, DataWizDataTypes::U128(std::u128::MAX));
-            }
-            else if dtypes[i] == "i8" {
-                sl = SkipList::new(n, DataWizDataTypes::I8(std::i8::MAX));
-            }
-            else if dtypes[i] == "i16" {
-                sl = SkipList::new(n, DataWizDataTypes::I16(std::i16::MAX));
-            }
-            else if dtypes[i] == "i32" {
-                sl = SkipList::new(n, DataWizDataTypes::I32(std::i32::MAX));
-            }
-            else if dtypes[i] == "i64" {
-                sl = SkipList::new(n, DataWizDataTypes::I64(std::i64::MAX));
-            }
-            else if dtypes[i] == "f32" {
-                sl = SkipList::new(n, DataWizDataTypes::F32(std::f32::MAX));
-            }
-            else if dtypes[i] == "f64" {
-                sl = SkipList::new(n, DataWizDataTypes::F64(std::f64::MAX));
-            }
-            else {
-                sl = SkipList::new(n, DataWizDataTypes::Text(String::from("")));
-            }
-
             let data_slice:&[DataWizDataTypes] = &data[(i*num_rows+start)..(i+1)*num_rows];
-            
-            let mut vector = data_slice.to_vec();
-            vector.sort_by(|a, b| a.partial_cmp(b).unwrap());
-
-            sl.insert_initial(&vector);
+            // let mut vector = data_slice.to_vec();
+            let sl = Sorter::new(data_slice);
             index.push(sl);
-            println!("{:?}", i);
+
+            // let mut sl:SkipList<DataWizDataTypes>;
+            // let n = num_rows;
+    
+            // if dtypes[i] == "u8" {
+            //     sl = SkipList::new(n, DataWizDataTypes::U8(std::u8::MAX));
+            // }
+            // else if dtypes[i] == "u16" {
+            //     sl = SkipList::new(n, DataWizDataTypes::U16(std::u16::MAX));
+            // }
+            // else if dtypes[i] == "u32" {
+            //     sl = SkipList::new(n, DataWizDataTypes::U32(std::u32::MAX));
+            // }
+            // else if dtypes[i] == "u64" {
+            //     sl = SkipList::new(n, DataWizDataTypes::U64(std::u64::MAX));
+            // }
+            // else if dtypes[i] == "u128" {
+            //     sl = SkipList::new(n, DataWizDataTypes::U128(std::u128::MAX));
+            // }
+            // else if dtypes[i] == "i8" {
+            //     sl = SkipList::new(n, DataWizDataTypes::I8(std::i8::MAX));
+            // }
+            // else if dtypes[i] == "i16" {
+            //     sl = SkipList::new(n, DataWizDataTypes::I16(std::i16::MAX));
+            // }
+            // else if dtypes[i] == "i32" {
+            //     sl = SkipList::new(n, DataWizDataTypes::I32(std::i32::MAX));
+            // }
+            // else if dtypes[i] == "i64" {
+            //     sl = SkipList::new(n, DataWizDataTypes::I64(std::i64::MAX));
+            // }
+            // else if dtypes[i] == "f32" {
+            //     sl = SkipList::new(n, DataWizDataTypes::F32(std::f32::MAX));
+            // }
+            // else if dtypes[i] == "f64" {
+            //     sl = SkipList::new(n, DataWizDataTypes::F64(std::f64::MAX));
+            // }
+            // else {
+            //     sl = SkipList::new(n, DataWizDataTypes::Text(String::from("")));
+            // }
+            
+            // let data_slice:&[DataWizDataTypes] = &data[(i*num_rows+start)..(i+1)*num_rows];
+            
+            // let mut vector = data_slice.to_vec();
+            // vector.sort_by(|a, b| a.partial_cmp(b).unwrap());
+
+            // sl.insert_initial(&vector);
+
+            // index.push(sl);
+            // println!("{:?}", i);
         }
     
         return index;
@@ -1140,11 +1348,17 @@ fn main() {
     let mut data = read_file(path, String::from("\n"), true);
     let dtypes = infer_data_types(&mut data.0, data.2, data.3, true);
     let new_data = update_data_type(&mut data.0, &dtypes, data.2, data.3, true);
+    let end_time = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_millis();
+    println!("{:?}", end_time-start_time);
+
+    let start_time = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_millis();
     let index = create_index(&new_data, &dtypes, data.2, data.3, true);
+    let filtered = index[29].search_gte(DataWizDataTypes::I16(64));
     let end_time = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_millis();
     println!("{:?}", end_time-start_time);
     println!("{:?}", data.1);
     println!("{:?}", dtypes);
+    println!("{:?}", filtered.len());
     // match &mut data {
     //     Some(x) => {
     //         // println!("{:?}", x);
